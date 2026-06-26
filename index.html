@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍒 Кликер</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .bg-particles {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+        }
+
+        .bg-particle {
+            position: absolute; border-radius: 50%;
+            background: rgba(255, 105, 180, 0.12);
+            animation: floatUp linear infinite;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 1; } 90% { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        .bg-99 {
+            position: absolute;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            pointer-events: none;
+            opacity: 0;
+            animation: float99 linear infinite, rainbow99 4s linear infinite;
+        }
+
+        @keyframes float99 {
+            0% { transform: translateY(105vh) rotate(0deg); opacity: 0; }
+            5% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(var(--rot99)); opacity: 0; }
+        }
+
+        @keyframes rainbow99 {
+            0%   { color: hsl(0,   100%, 65%); text-shadow: 0 0 12px hsla(0,   100%, 65%, 0.4); }
+            16%  { color: hsl(60,  100%, 60%); text-shadow: 0 0 12px hsla(60,  100%, 60%, 0.4); }
+            33%  { color: hsl(120, 90%,  55%); text-shadow: 0 0 12px hsla(120, 90%,  55%, 0.4); }
+            50%  { color: hsl(180, 100%, 55%); text-shadow: 0 0 12px hsla(180, 100%, 55%, 0.4); }
+            66%  { color: hsl(240, 100%, 70%); text-shadow: 0 0 12px hsla(240, 100%, 70%, 0.4); }
+            83%  { color: hsl(300, 100%, 65%); text-shadow: 0 0 12px hsla(300, 100%, 65%, 0.4); }
+            100% { color: hsl(360, 100%, 65%); text-shadow: 0 0 12px hsla(360, 100%, 65%, 0.4); }
+        }
+
+        .container {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column;
+            align-items: center; gap: 10px;
+        }
+
+        .score-panel {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 20px 50px; text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .score-label {
+            font-size: 14px; text-transform: uppercase;
+            letter-spacing: 3px; color: rgba(255,255,255,0.5);
+            margin-bottom: 8px;
+        }
+
+        .score-value {
+            font-size: 64px; font-weight: 800;
+            background: linear-gradient(135deg, #ff6b9d, #c084fc, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1; transition: transform 0.1s ease;
+        }
+
+        .score-value.bump { transform: scale(1.15); }
+
+        .stats { display: flex; gap: 30px; margin-top: 10px; }
+        .stat-item { text-align: center; }
+        .stat-item .stat-val { font-size: 22px; font-weight: 600; color: rgba(255,255,255,0.7); }
+        .stat-item .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.3); margin-top: 4px; }
+
+        .boob-area {
+            position: relative;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            margin: -40px 0;
+        }
+
+        .multiplier-badge {
+            position: absolute; top: 55px; right: 50%; transform: translateX(50%);
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1a1a2e; font-weight: 800; font-size: 16px;
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(251,191,36,0.4);
+            opacity: 0; transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            z-index: 5;
+        }
+
+        .multiplier-badge.active { opacity: 1; transform: scale(1); }
+
+        .click-particle {
+            position: fixed; pointer-events: none;
+            font-size: 28px; z-index: 100;
+            animation: particleFly 1s ease-out forwards;
+        }
+
+        @keyframes particleFly {
+            0% { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
+            100% { opacity: 0; transform: translate(var(--tx),var(--ty)) scale(0.3) rotate(var(--rot)); }
+        }
+
+        .plus-one {
+            position: fixed; pointer-events: none;
+            font-size: 32px; font-weight: 800;
+            color: #ff6b9d; text-shadow: 0 0 10px rgba(255,107,157,0.5);
+            z-index: 100; animation: floatScore 1s ease-out forwards;
+        }
+
+        @keyframes floatScore {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+
+        .achievement {
+            position: fixed; top: 30px; left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 16px; padding: 16px 32px;
+            color: white; font-size: 18px; font-weight: 600;
+            z-index: 200;
+            animation: achieveIn 0.5s ease forwards, achieveOut 0.5s ease 2.5s forwards;
+            white-space: nowrap;
+        }
+
+        @keyframes achieveIn { to { transform: translateX(-50%) translateY(0); } }
+        @keyframes achieveOut { to { transform: translateX(-50%) translateY(-100px); opacity: 0; } }
+
+        .hint {
+            font-size: 13px; color: rgba(255,255,255,0.25);
+            letter-spacing: 1px; animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse { 0%,100% { opacity: 0.25; } 50% { opacity: 0.5; } }
+
+        @media (max-width: 480px) {
+            .score-value { font-size: 48px; }
+            .score-panel { padding: 16px 36px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-particles" id="bgParticles"></div>
+    <div class="container">
+        <div class="score-panel">
+            <div class="score-label">Счёт</div>
+            <div class="score-value" id="score">0</div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-val" id="cps">0.0</div>
+                    <div class="stat-label">клик/сек</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val" id="best-combo">0</div>
+                    <div class="stat-label">макс комбо</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="boob-area" id="boobArea">
+            <canvas id="boobCanvas"></canvas>
+            <div class="multiplier-badge" id="multBadge">x1</div>
+        </div>
+
+        <div class="hint">нажми на неё 👆</div>
+    </div>
+
+<script>
+(() => {
+    // ═══════════════════════════════════════════════
+    //  CANVAS SETUP — wide for two breasts
+    // ═══════════════════════════════════════════════
+    const canvas = document.getElementById('boobCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const LW = 700, LH = 400;
+    canvas.style.width = LW + 'px';
+    canvas.style.height = LH + 'px';
+    canvas.width = LW * dpr;
+    canvas.height = LH * dpr;
+    ctx.scale(dpr, dpr);
+
+    // Two breast centers (closer together for cleavage)
+    const GAP = 18; // pixels between inner edges
+    const R = 105;
+    const LEFT_CX = LW / 2 - R - GAP / 2;
+    const RIGHT_CX = LW / 2 + R + GAP / 2;
+    const CY = LH / 2;
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function calcArea(pts) {
+        let a = 0;
+        for (let i = 0; i < pts.length; i++) {
+            const j = (i + 1) % pts.length;
+            a += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+        }
+        return Math.abs(a) / 2;
+    }
+
+    // ═══════════════════════════════════════════════
+    //  BREAST CLASS — independent physics per breast
+    // ═══════════════════════════════════════════════
+    class Breast {
+        constructor(mirror) {
+            this.mirror = mirror; // 1 = normal (left), -1 = mirrored (right)
+            this.N = 40;
+            this.R = R;
+
+            // Build rest shape
+            this.restPts = [];
+            for (let i = 0; i < this.N; i++) {
+                const t = (i / this.N) * Math.PI * 2;
+                let x = Math.cos(t);
+                let y = Math.sin(t);
+                x *= 1.07;
+                y *= 0.94;
+                const below = Math.max(0, y);
+                y += below * below * 0.15;
+                x *= 1 + below * 0.04;
+                const above = Math.max(0, -y);
+                y -= above * above * 0.05;
+                this.restPts.push({ x: x * this.R * this.mirror, y: y * this.R });
+            }
+            this.restArea = calcArea(this.restPts);
+
+            // Physics arrays
+            this.ox = new Float64Array(this.N);
+            this.oy = new Float64Array(this.N);
+            this.vx = new Float64Array(this.N);
+            this.vy = new Float64Array(this.N);
+
+            // Per-point stiffness & damping
+            this.stiffness = new Float64Array(this.N);
+            this.damping = new Float64Array(this.N);
+            for (let i = 0; i < this.N; i++) {
+                const t = (i / this.N) * Math.PI * 2;
+                const softness = (Math.sin(t) + 1) / 2;
+                this.stiffness[i] = 200 - softness * 150;
+                const zeta = 0.25 + softness * 0.07;
+                this.damping[i] = 2 * zeta * Math.sqrt(this.stiffness[i]);
+            }
+
+            // Sway
+            this.swayX = 0; this.swayY = 0;
+            this.swayVX = 0; this.swayVY = 0;
+
+            // Tilt
+            this.tilt = 0; this.tiltV = 0;
+
+            // Breathing (slightly offset between breasts)
+            this.breathPhase = mirror === 1 ? 0 : 0.7;
+
+            // Visual
+            this.glowIntensity = 0;
+            this.nippleErect = 0;
+            this.flushAmount = 0;
+        }
+
+        physicsStep(dtTotal) {
+            dtTotal = Math.min(dtTotal, 0.04);
+            const sub = 5, dt = dtTotal / sub;
+            const N = this.N, K_N = 40, GRAV = 20, P_K = 2100;
+
+            for (let s = 0; s < sub; s++) {
+                const cur = [];
+                for (let i = 0; i < N; i++) {
+                    cur.push({ x: this.restPts[i].x + this.ox[i], y: this.restPts[i].y + this.oy[i] });
+                }
+                const curA = calcArea(cur);
+                const pErr = (this.restArea - curA) / this.restArea;
+
+                for (let i = 0; i < N; i++) {
+                    const prev = (i - 1 + N) % N, next = (i + 1) % N;
+                    let fx = -this.stiffness[i] * this.ox[i];
+                    let fy = -this.stiffness[i] * this.oy[i];
+                    fx += K_N * (this.ox[prev] + this.ox[next] - 2 * this.ox[i]);
+                    fy += K_N * (this.oy[prev] + this.oy[next] - 2 * this.oy[i]);
+                    fy += GRAV;
+                    const nx = -(cur[next].y - cur[prev].y);
+                    const ny =  (cur[next].x - cur[prev].x);
+                    const nL = Math.sqrt(nx * nx + ny * ny) || 1;
+                    fx += pErr * P_K * (nx / nL) / N;
+                    fy += pErr * P_K * (ny / nL) / N;
+                    fx -= this.damping[i] * this.vx[i];
+                    fy -= this.damping[i] * this.vy[i];
+                    this.vx[i] += fx * dt;
+                    this.vy[i] += fy * dt;
+                    this.ox[i] += this.vx[i] * dt;
+                    this.oy[i] += this.vy[i] * dt;
+                }
+            }
+
+            const SWAY_K = 20, SWAY_D = 2 * 0.35 * Math.sqrt(SWAY_K);
+            this.swayVX += (-SWAY_K * this.swayX - SWAY_D * this.swayVX) * dtTotal;
+            this.swayVY += (-SWAY_K * this.swayY - SWAY_D * this.swayVY) * dtTotal;
+            this.swayX += this.swayVX * dtTotal;
+            this.swayY += this.swayVY * dtTotal;
+
+            const TILT_K = 15, TILT_D = 2 * 0.32 * Math.sqrt(TILT_K);
+            this.tiltV += (-TILT_K * this.tilt - TILT_D * this.tiltV) * dtTotal;
+            this.tilt += this.tiltV * dtTotal;
+
+            this.breathPhase += dtTotal * 1.5;
+            this.glowIntensity *= Math.pow(0.02, dtTotal);
+            this.nippleErect = Math.max(0, this.nippleErect - dtTotal * 0.3);
+            this.flushAmount = Math.max(0, this.flushAmount - dtTotal * 0.18);
+        }
+
+        getOutline() {
+            const bx = 1 + Math.sin(this.breathPhase) * 0.008;
+            const by = 1 + Math.cos(this.breathPhase) * 0.013;
+            const pts = [];
+            for (let i = 0; i < this.N; i++) {
+                pts.push({
+                    x: (this.restPts[i].x + this.ox[i]) * bx,
+                    y: (this.restPts[i].y + this.oy[i]) * by
+                });
+            }
+            return pts;
+        }
+
+        poke(lx, ly, strength) {
+            for (let i = 0; i < this.N; i++) {
+                const px = this.restPts[i].x, py = this.restPts[i].y;
+                const dx = px - lx, dy = py - ly;
+                const force = strength * Math.exp(-(dx*dx + dy*dy) / (this.R * this.R * 0.55));
+                const tcX = -px, tcY = -py;
+                const tcL = Math.sqrt(tcX*tcX + tcY*tcY) || 1;
+                this.vx[i] += (tcX / tcL) * force;
+                this.vy[i] += (tcY / tcL) * force;
+            }
+        }
+
+        slap(dirX, dirY, strength) {
+            for (let i = 0; i < this.N; i++) {
+                const t = (i / this.N) * Math.PI * 2;
+                const bf = 0.4 + 0.6 * ((Math.sin(t) + 1) / 2);
+                this.vx[i] += dirX * strength * bf;
+                this.vy[i] += dirY * strength * bf;
+            }
+        }
+
+        draw(cx, cy) {
+            const pts = this.getOutline();
+            const R = this.R, m = this.mirror;
+
+            ctx.save();
+            ctx.translate(cx + this.swayX, cy + this.swayY);
+            ctx.rotate(this.tilt);
+
+            // Drop shadow
+            ctx.save();
+            ctx.translate(0, R * 0.97);
+            ctx.scale(1, 0.1);
+            ctx.beginPath();
+            ctx.arc(0, 0, R * 0.55, 0, Math.PI * 2);
+            const dsh = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.55);
+            dsh.addColorStop(0, 'rgba(0,0,0,0.2)');
+            dsh.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = dsh; ctx.fill();
+            ctx.restore();
+
+            // Glow
+            if (this.glowIntensity > 0.01) {
+                ctx.save(); ctx.beginPath();
+                ctx.arc(0, 0, R * 1.3, 0, Math.PI * 2);
+                const gg = ctx.createRadialGradient(0, 0, R * 0.5, 0, 0, R * 1.3);
+                gg.addColorStop(0, 'rgba(255,180,200,0)');
+                gg.addColorStop(0.6, `rgba(255,150,180,${this.glowIntensity * 0.15})`);
+                gg.addColorStop(1, 'rgba(255,120,160,0)');
+                ctx.fillStyle = gg; ctx.fill();
+                ctx.restore();
+            }
+
+            // Body
+            this._traceCurve(pts);
+            const af = this.flushAmount;
+            const sr = lerp(232, 245, af), sg = lerp(198, 168, af), sb = lerp(176, 155, af);
+            const skin = ctx.createRadialGradient(
+                -R * 0.22 * m, -R * 0.28, R * 0.06,
+                R * 0.05 * m, R * 0.12, R * 1.15
+            );
+            skin.addColorStop(0, `rgb(${sr+14},${sg+20},${sb+17})`);
+            skin.addColorStop(0.2, `rgb(${sr+5},${sg+8},${sb+5})`);
+            skin.addColorStop(0.5, `rgb(${sr},${sg},${sb})`);
+            skin.addColorStop(0.75, `rgb(${sr-15},${sg-20},${sb-15})`);
+            skin.addColorStop(1.0, `rgb(${sr-32},${sg-38},${sb-28})`);
+            ctx.fillStyle = skin; ctx.fill();
+
+            // SSS
+            this._traceCurve(pts);
+            const sss = ctx.createRadialGradient(R*0.05*m, R*0.1, 0, 0, 0, R*0.8);
+            sss.addColorStop(0, `rgba(255,${lerp(188,150,af)},${lerp(178,148,af)},${0.1+af*0.06})`);
+            sss.addColorStop(0.5, 'rgba(255,200,190,0.03)');
+            sss.addColorStop(1, 'rgba(255,200,190,0)');
+            ctx.fillStyle = sss; ctx.fill();
+
+            // Specular
+            ctx.save(); ctx.beginPath();
+            ctx.ellipse(-R*0.24*m, -R*0.3, R*0.28, R*0.16, -0.35*m, 0, Math.PI*2);
+            const sp = ctx.createRadialGradient(-R*0.24*m, -R*0.3, 0, -R*0.24*m, -R*0.3, R*0.28);
+            sp.addColorStop(0, 'rgba(255,255,255,0.35)');
+            sp.addColorStop(0.4, 'rgba(255,255,255,0.1)');
+            sp.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = sp; ctx.fill();
+            ctx.restore();
+
+            // Rim
+            ctx.save(); ctx.beginPath();
+            ctx.ellipse(R*0.3*m, R*0.38, R*0.16, R*0.09, 0.3*m, 0, Math.PI*2);
+            const rl = ctx.createRadialGradient(R*0.3*m, R*0.38, 0, R*0.3*m, R*0.38, R*0.16);
+            rl.addColorStop(0, 'rgba(255,238,228,0.08)');
+            rl.addColorStop(1, 'rgba(255,238,228,0)');
+            ctx.fillStyle = rl; ctx.fill();
+            ctx.restore();
+
+            // Under-shadow
+            ctx.save();
+            this._traceCurve(pts); ctx.clip();
+            ctx.beginPath();
+            ctx.ellipse(0, R*0.55, R*0.7, R*0.3, 0, 0, Math.PI*2);
+            const us = ctx.createRadialGradient(0, R*0.55, 0, 0, R*0.55, R*0.7);
+            us.addColorStop(0, 'rgba(155,105,95,0.12)');
+            us.addColorStop(1, 'rgba(155,105,95,0)');
+            ctx.fillStyle = us; ctx.fill();
+            ctx.restore();
+
+            // Areola
+            const aY = R * 0.02, aR = R * 0.19;
+            ctx.save(); ctx.beginPath();
+            ctx.ellipse(0, aY, aR, aR*0.96, 0, 0, Math.PI*2);
+            const ag = ctx.createRadialGradient(0, aY, 0, 0, aY, aR);
+            ag.addColorStop(0, `rgba(${lerp(196,212,af)},${lerp(130,110,af)},${lerp(120,102,af)},0.92)`);
+            ag.addColorStop(0.5, `rgba(${lerp(186,203,af)},${lerp(116,96,af)},${lerp(110,90,af)},0.75)`);
+            ag.addColorStop(1, `rgba(${lerp(176,193,af)},${lerp(110,90,af)},${lerp(106,86,af)},0)`);
+            ctx.fillStyle = ag; ctx.fill();
+            for (let i = 0; i < 10; i++) {
+                const a = (i/10)*Math.PI*2+0.25;
+                const d = aR*(0.6+0.2*((i*7+2)%5)/4);
+                ctx.beginPath();
+                ctx.arc(Math.cos(a)*d, aY+Math.sin(a)*d*0.96, 1.5, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(192,122,112,0.2)'; ctx.fill();
+            }
+            ctx.restore();
+
+            // Nipple
+            const ne = this.nippleErect;
+            const nR = lerp(6.5, 10.5, ne), nH = lerp(0.5, 4, ne);
+            const nY = aY - nH * 0.35;
+            ctx.save(); ctx.beginPath();
+            ctx.ellipse(0, nY, nR, nR*lerp(0.9,1,ne), 0, 0, Math.PI*2);
+            const ng = ctx.createRadialGradient(-nR*0.18, nY-nR*0.12, 0, 0, nY, nR);
+            ng.addColorStop(0, `rgb(${lerp(203,216,af)},${lerp(136,116,af)},${lerp(126,106,af)})`);
+            ng.addColorStop(0.5, `rgb(${lerp(186,201,af)},${lerp(116,96,af)},${lerp(110,90,af)})`);
+            ng.addColorStop(1, `rgb(${lerp(170,186,af)},${lerp(100,80,af)},${lerp(96,76,af)})`);
+            ctx.fillStyle = ng; ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-nR*0.1, nY-nR*0.2, nR*0.3, nR*0.17, -0.3, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(255,222,212,0.25)'; ctx.fill();
+            if (ne > 0.2) {
+                ctx.strokeStyle = `rgba(168,98,88,${ne*0.1})`; ctx.lineWidth = 0.4;
+                for (let i = 0; i < 6; i++) {
+                    const a = (i/6)*Math.PI*2;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(a)*nR*0.12, nY+Math.sin(a)*nR*0.12);
+                    ctx.lineTo(Math.cos(a)*nR*0.75, nY+Math.sin(a)*nR*0.75);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+
+            ctx.restore(); // main transform
+        }
+
+        _traceCurve(pts) {
+            const n = pts.length;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 0; i < n; i++) {
+                const p0 = pts[(i-1+n)%n], p1 = pts[i];
+                const p2 = pts[(i+1)%n], p3 = pts[(i+2)%n];
+                ctx.bezierCurveTo(
+                    p1.x+(p2.x-p0.x)/6, p1.y+(p2.y-p0.y)/6,
+                    p2.x-(p3.x-p1.x)/6, p2.y-(p3.y-p1.y)/6,
+                    p2.x, p2.y
+                );
+            }
+            ctx.closePath();
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    //  CREATE TWO BREASTS
+    // ═══════════════════════════════════════════════
+    const leftBoob = new Breast(1);   // normal
+    const rightBoob = new Breast(-1); // mirrored
+
+    // ─── Draw cleavage shadow ───
+    function drawCleavage() {
+        const cx = LW / 2, cy = CY;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + R * 0.05, GAP + 8, R * 0.75, 0, 0, Math.PI * 2);
+        const cg = ctx.createRadialGradient(cx, cy + R*0.05, 0, cx, cy + R*0.05, GAP + 8);
+        cg.addColorStop(0, 'rgba(120,70,65,0.2)');
+        cg.addColorStop(0.5, 'rgba(120,70,65,0.08)');
+        cg.addColorStop(1, 'rgba(120,70,65,0)');
+        ctx.fillStyle = cg;
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // ─── Animation loop ───
+    let lastT = performance.now();
+    function loop(now) {
+        const dt = (now - lastT) / 1000;
+        lastT = now;
+        leftBoob.physicsStep(dt);
+        rightBoob.physicsStep(dt);
+        ctx.clearRect(0, 0, LW, LH);
+        // Draw cleavage shadow first (behind both)
+        drawCleavage();
+        // Draw both breasts
+        leftBoob.draw(LEFT_CX, CY);
+        rightBoob.draw(RIGHT_CX, CY);
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // ═══════════════════════════════════════════════
+    //  CLICK / INTERACTION
+    // ═══════════════════════════════════════════════
+    const boobArea = document.getElementById('boobArea');
+    const scoreEl = document.getElementById('score');
+    const cpsEl = document.getElementById('cps');
+    const bestComboEl = document.getElementById('best-combo');
+    const multBadge = document.getElementById('multBadge');
+
+    let score = 0, combo = 0, bestCombo = 0, multiplier = 1;
+    let clickTimestamps = [];
+    let comboTimer = null;
+    const emojis = ['💖','💗','💕','💞','✨','🌸','💜','🩷','❤️‍🔥','😍','🔥','💋'];
+
+    const achievements = [
+        { at: 10, text: '🎉 Первые 10!' },
+        { at: 50, text: '🔥 Разогрев! 50' },
+        { at: 100, text: '💯 Сотка!' },
+        { at: 250, text: '⚡ Скорострел! 250' },
+        { at: 500, text: '🏆 Полтысячи!' },
+        { at: 1000, text: '👑 Тысячник!' },
+        { at: 2500, text: '🌟 Легенда! 2500' },
+        { at: 5000, text: '💎 Бриллиант! 5000' },
+        { at: 10000, text: '🚀 Космос! 10000' },
+    ];
+    let nextAch = 0;
+
+    // ── Determine which breast was clicked ──
+    function getClickedBreast(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left) / rect.width * LW;
+        // Left half → left boob, right half → right boob
+        if (cx < LW / 2) {
+            return { breast: leftBoob, bcx: LEFT_CX };
+        } else {
+            return { breast: rightBoob, bcx: RIGHT_CX };
+        }
+    }
+
+    boobArea.addEventListener('click', (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const rect = canvas.getBoundingClientRect();
+        const { breast, bcx } = getClickedBreast(e);
+
+        // Local coords relative to this breast's center
+        const lx = (e.clientX - rect.left) / rect.width * LW - bcx - breast.swayX;
+        const ly = (e.clientY - rect.top) / rect.height * LH - CY - breast.swayY;
+
+        // Physics on clicked breast
+        breast.poke(lx, ly, 320);
+        const pokeLen = Math.sqrt(lx*lx + ly*ly) || 1;
+        breast.slap(-lx/pokeLen, -ly/pokeLen, 60);
+        breast.swayVX += (lx/pokeLen) * -55;
+        breast.swayVY += (ly/pokeLen) * -35;
+        breast.tiltV += (lx / R) * 5;
+        breast.glowIntensity = 1.0;
+        breast.nippleErect = Math.min(breast.nippleErect + 0.25, 1.0);
+        breast.flushAmount = Math.min(breast.flushAmount + 0.1, 1.0);
+
+        // Sympathetic jiggle on the other breast (lighter)
+        const other = breast === leftBoob ? rightBoob : leftBoob;
+        other.slap(-lx/pokeLen * 0.3, -ly/pokeLen * 0.3, 25);
+        other.swayVX += (lx/pokeLen) * -15;
+        other.swayVY += (ly/pokeLen) * -10;
+        other.nippleErect = Math.min(other.nippleErect + 0.08, 1.0);
+
+        // Game
+        combo++;
+        clearTimeout(comboTimer);
+        comboTimer = setTimeout(() => {
+            combo = 0; multiplier = 1;
+            multBadge.classList.remove('active');
+        }, 1500);
+
+        if (combo >= 30) multiplier = 5;
+        else if (combo >= 20) multiplier = 4;
+        else if (combo >= 15) multiplier = 3;
+        else if (combo >= 10) multiplier = 2;
+        else multiplier = 1;
+
+        if (multiplier > 1) {
+            multBadge.textContent = 'x' + multiplier;
+            multBadge.classList.add('active');
+        }
+
+        score += multiplier;
+        scoreEl.textContent = score.toLocaleString();
+        if (combo > bestCombo) { bestCombo = combo; bestComboEl.textContent = bestCombo; }
+        scoreEl.classList.add('bump');
+        setTimeout(() => scoreEl.classList.remove('bump'), 100);
+
+        const pc = Math.min(3 + Math.floor(multiplier), 8);
+        for (let i = 0; i < pc; i++) spawnParticle(e.clientX, e.clientY);
+        spawnPlusOne(e.clientX, e.clientY, multiplier);
+
+        clickTimestamps.push(now);
+        clickTimestamps = clickTimestamps.filter(t => now - t < 3000);
+        cpsEl.textContent = (clickTimestamps.length / 3).toFixed(1);
+
+        if (nextAch < achievements.length && score >= achievements[nextAch].at) {
+            showAchievement(achievements[nextAch].text); nextAch++;
+        }
+    });
+
+    boobArea.addEventListener('mousemove', (e) => {
+        const { breast } = getClickedBreast(e);
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) / rect.width - 0.5;
+        breast.tilt += mx * 0.0003;
+    });
+
+    boobArea.addEventListener('contextmenu', e => e.preventDefault());
+
+    // ─── BG particles ───
+    (() => {
+        const c = document.getElementById('bgParticles');
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'bg-particle';
+            const s = Math.random() * 6 + 3;
+            p.style.width = s + 'px'; p.style.height = s + 'px';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = (Math.random() * 10 + 8) + 's';
+            p.style.animationDelay = (Math.random() * 10) + 's';
+            c.appendChild(p);
+        }
+        for (let i = 0; i < 25; i++) {
+            const el = document.createElement('div');
+            el.className = 'bg-99';
+            el.textContent = '99';
+            const size = 18 + Math.random() * 42;
+            el.style.fontSize = size + 'px';
+            el.style.left = Math.random() * 100 + '%';
+            const dur = 10 + Math.random() * 14;
+            el.style.animationDuration = dur + 's, ' + (2 + Math.random() * 4) + 's';
+            el.style.animationDelay = (Math.random() * dur) + 's, ' + (Math.random() * 4) + 's';
+            el.style.setProperty('--rot99', (Math.random() * 180 - 90) + 'deg');
+            c.appendChild(el);
+        }
+    })();
+
+    // ─── FX helpers ───
+    function spawnParticle(x, y) {
+        const p = document.createElement('div');
+        p.className = 'click-particle';
+        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        p.style.left = x + 'px'; p.style.top = y + 'px';
+        const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * 100;
+        p.style.setProperty('--tx', Math.cos(a) * d + 'px');
+        p.style.setProperty('--ty', Math.sin(a) * d + 'px');
+        p.style.setProperty('--rot', (Math.random()*360-180)+'deg');
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 1000);
+    }
+
+    function spawnPlusOne(x, y, m) {
+        const el = document.createElement('div');
+        el.className = 'plus-one';
+        el.textContent = '+' + m;
+        el.style.left = (x + Math.random()*40-20) + 'px';
+        el.style.top = (y-20) + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    function showAchievement(text) {
+        const el = document.createElement('div');
+        el.className = 'achievement';
+        el.innerHTML = text;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+    }
+})();
+</script>
+</body>
+</html>
